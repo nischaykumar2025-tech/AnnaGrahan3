@@ -1,24 +1,51 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function FoodCard({ post, onClaimed }) {
     const [claiming, setClaiming] = useState(false);
+    const [timeLeft, setTimeLeft] = useState('');
+    const [isExpired, setIsExpired] = useState(false);
+
+    useEffect(() => {
+        const calculateTimeLeft = () => {
+            const expiry = new Date(post.expires_at).getTime();
+            const now = new Date().getTime();
+            const difference = expiry - now;
+
+            if (difference <= 0) {
+                setTimeLeft('EXPIRED');
+                setIsExpired(true);
+                return;
+            }
+
+            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+            setTimeLeft(
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+            );
+        };
+
+        // Run immediately, then update every second
+        calculateTimeLeft();
+        const timer = setInterval(calculateTimeLeft, 1000);
+
+        return () => clearInterval(timer);
+    }, [post.expires_at]);
 
     const handleClaim = async () => {
-        // Prevent double-clicks or claiming already claimed items
-        if (post.status !== 'AVAILABLE') return;
+        if (post.status !== 'AVAILABLE' || isExpired) return;
         
         setClaiming(true);
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://annagrahan.vercel.app';
             
-            // Hit the claim endpoint we established in the backend
             const res = await fetch(`${apiUrl}/api/food/${post.id}/claim`, {
                 method: 'POST',
             });
             
             if (res.ok) {
-                // Instantly refresh the homepage feed
                 if (onClaimed) onClaimed();
             } else {
                 const data = await res.json();
@@ -32,7 +59,7 @@ export default function FoodCard({ post, onClaimed }) {
         }
     };
 
-    const isAvailable = post.status === 'AVAILABLE';
+    const isAvailable = post.status === 'AVAILABLE' && !isExpired;
 
     return (
         <div 
@@ -51,15 +78,23 @@ export default function FoodCard({ post, onClaimed }) {
                     <span className="font-medium text-gray-700 text-lg">{post.eatery_name}</span>
                 </div>
                 
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex items-center gap-4 mb-4">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ backgroundColor: 'rgb(255, 242, 160)' }}>
                         📦
                     </div>
                     <span className="font-medium text-gray-700 text-lg">{post.quantity}</span>
                 </div>
+
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ backgroundColor: 'rgb(255, 242, 160)' }}>
+                        ⏳
+                    </div>
+                    <span className={`font-bold text-lg ${isExpired ? 'text-red-600' : 'text-gray-700'}`}>
+                        {isExpired ? 'EXPIRED' : `Expires in ${timeLeft}`}
+                    </span>
+                </div>
             </div>
 
-            {/* Interactive Claim Button */}
             <button 
                 onClick={handleClaim}
                 disabled={!isAvailable || claiming}
@@ -74,7 +109,7 @@ export default function FoodCard({ post, onClaimed }) {
                     boxShadow: isAvailable ? '0 4px 6px rgba(0,0,0,0.05)' : 'none'
                 }}
             >
-                {claiming ? 'Claiming...' : isAvailable ? 'Claim Food' : 'Claimed'}
+                {claiming ? 'Claiming...' : isExpired ? 'Expired' : isAvailable ? 'Claim Food' : 'Claimed'}
             </button>
         </div>
     );
