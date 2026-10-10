@@ -2,79 +2,57 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// GET all available food posts (Runtime validation layer included)
+// GET: Browse available food
 router.get('/', async (req, res) => {
     try {
-        const { rows } = await db.query(
-            `SELECT * FROM food_posts 
-             WHERE status = 'available' AND expires_at > NOW() 
-             ORDER BY created_at DESC`
+        // Enforces PRD rule: Only return AVAILABLE listings where current_time < expiry_time
+        const result = await db.query(
+            "SELECT * FROM food WHERE status = 'AVAILABLE' AND expires_at > NOW() ORDER BY expires_at ASC"
         );
-        res.json(rows);
+        res.json(result.rows);
     } catch (err) {
+        console.error('Database query error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// POST: Create a new food listing
+// POST: Create a listing
 router.post('/', async (req, res) => {
-    const { eatery_name, title, quantity, expires_at } = req.body;
     try {
-        const { rows } = await db.query(
-            `INSERT INTO food_posts (eatery_name, title, quantity, expires_at) 
-             VALUES ($1, $2, $3, $4) RETURNING *`,
+        const { eatery_name, title, quantity, expires_at } = req.body;
+        const newFood = await db.query(
+            "INSERT INTO food (eatery_name, title, quantity, expires_at, status) VALUES ($1, $2, $3, $4, 'AVAILABLE') RETURNING *",
             [eatery_name, title, quantity, expires_at]
         );
-        res.status(201).json(rows[0]);
+        res.json(newFood.rows[0]);
     } catch (err) {
+        console.error('Database insert error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// POST: Claim a food listing (Atomic Transaction)
+// POST: Claim food (Atomic update to prevent race conditions)
 router.post('/:id/claim', async (req, res) => {
-    const { id } = req.params;
-    const { consumer_name } = req.body;
-
-    const client = await db.pool.connect();
     try {
-        await client.query('BEGIN');
-
-        // Lock the row to prevent race conditions
-        const checkRes = await client.query(
-            `SELECT * FROM food_posts WHERE id = $1 FOR UPDATE`,
+        const { id } = req.params;
+        
+        // Enforces PRD Case 1 & 2: Atomic update ensuring it is AVAILABLE and not expired
+        const result = await db.query(
+            "UPDATE food SET status = 'CLAIMED' WHERE id = $1 AND status = 'AVAILABLE' AND expires_at > NOW() RETURNING *",
             [id]
         );
 
-        if (checkRes.rows.length === 0) {
-            throw new Error('Listing not found');
+        if (result.rowCount === 0) {
+            return res.status(409).json({ 
+                success: false, 
+                message: "Food is no longer available or already claimed." 
+            });
         }
 
-        const post = checkRes.rows[0];
-
-        if (post.status !== 'available' || new Date(post.expires_at) <= new Date()) {
-            throw new Error('Food is no longer available or has expired.');
-        }
-
-        // Update status to claimed
-        await client.query(
-            `UPDATE food_posts SET status = 'claimed' WHERE id = $1`,
-            [id]
-        );
-
-        // Insert claim record
-        await client.query(
-            `INSERT INTO claims (post_id, consumer_name) VALUES ($1, $2)`,
-            [id, consumer_name || 'Anonymous Consumer']
-        );
-
-        await client.query('COMMIT');
-        res.json({ message: 'Food successfully claimed!' });
+        res.json({ success: true, claim: result.rows[0] });
     } catch (err) {
-        await client.query('ROLLBACK');
-        res.status(400).json({ error: err.message });
-    } finally {
-        client.release();
+        console.error('Database claim error:', err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
