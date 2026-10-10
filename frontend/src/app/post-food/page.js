@@ -22,12 +22,24 @@ export default function PostFood() {
             expires_at: form.expires_at
         };
 
-        const res = await fetch('http://localhost:5000/api/food', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (res.ok) router.push('/');
+        // Dynamically uses Vercel environment variable, falling back to your provided backend URL
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://annagrahan-h45emtneo-nischay-kumar.vercel.app';
+
+        try {
+            const res = await fetch(`${apiUrl}/api/food`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (res.ok) {
+                router.push('/');
+            } else {
+                console.error('Failed to post surplus food. Status:', res.status);
+            }
+        } catch (error) {
+            console.error('Error connecting to backend:', error);
+        }
     };
 
     return (
@@ -106,7 +118,6 @@ export default function PostFood() {
                         />
                     </div>
 
-                    {/* Animated Calendar Input with New Sapphire/Gold Palette */}
                     <div className="pt-2">
                         <label className="block text-sm font-bold uppercase tracking-wider mb-2" style={{ color: '#1E3A8A' }}>
                             Safe-Consumption Expiry Time
