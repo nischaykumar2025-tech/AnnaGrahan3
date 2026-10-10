@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+:root {
+  /* Existing Earthy Palette */
+  --brand-green: rgb(125, 156, 101);
+  --brand-red: rgb(185, 54, 54);
+  --brand-orange: rgb(255, 156, 76);
+  --brand-yellow: rgb(255, 242, 160);
+  
+  /* NEW: Elegant Sapphire & Gold Palette for Form/Calendar */
+  --cal-primary: #1E3A8A; /* Deep Sapphire Blue */
+  --cal-accent: #B45309;  /* Warm Gold/Amber */
+  --cal-bg: #F0F9FF;      /* Soft Ice Blue */
+}
+
+body {
+  background-color: var(--brand-yellow);
+  background-image: radial-gradient(rgba(125, 156, 101, 0.15) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  color: rgb(40, 45, 35);
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+.font-classic {
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+/* Existing Shadows & Animations */
+.shadow-classic-card {
+  box-shadow: 0 10px 25px -5px rgba(125, 156, 101, 0.2), 0 8px 10px -6px rgba(185, 54, 54, 0.1);
+}
+.shadow-classic-hover {
+  box-shadow: 0 20px 30px -10px rgba(125, 156, 101, 0.4), 0 10px 15px -5px rgba(255, 156, 76, 0.2);
+}
+.shadow-btn-green { box-shadow: 0 4px 14px 0 rgba(125, 156, 101, 0.4); }
+.shadow-btn-orange { box-shadow: 0 4px 14px 0 rgba(255, 156, 76, 0.4); }
+
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-hero-float { animation: heroFloat 6s ease-in-out infinite; }
+.animate-slide-up { animation: slideUpFade 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+
+/* NEW: Classic Calendar & Form Animations */
+@keyframes elegantPulse {
+  0% { box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.2); border-color: var(--cal-primary); }
+  50% { box-shadow: 0 0 0 6px rgba(180, 83, 9, 0.15); border-color: var(--cal-accent); }
+  100% { box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.2); border-color: var(--cal-primary); }
+}
+
+.calendar-input-animated {
+  background-color: var(--cal-bg);
+  color: var(--cal-primary);
+  border: 2px solid transparent;
+  transition: all 0.4s ease;
+}
+
+.calendar-input-animated:focus {
+  animation: elegantPulse 2.5s infinite ease-in-out;
+  background-color: white;
+  outline: none;
+}
+
+/* ... keep existing styles above ... */
+
+/* NEW: Classic Calendar & Form Animations */
+@keyframes elegantPulse {
+  0% { box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.2); border-color: var(--cal-primary); }
+  50% { box-shadow: 0 0 0 6px rgba(180, 83, 9, 0.15); border-color: var(--cal-accent); }
+  100% { box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.2); border-color: var(--cal-primary); }
+}
+
+.calendar-input-animated {
+  background-color: var(--cal-bg);
+  color: var(--cal-primary);
+  border: 2px solid var(--cal-primary);
+  transition: all 0.4s ease;
+  color-scheme: light;
+}
+
+.calendar-input-animated:focus {
+  animation: elegantPulse 2.5s infinite ease-in-out;
+  background-color: white;
+  outline: none;
+}
+
+/* Customizing the native browser calendar icon */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: rgba(180, 83, 9, 0.1);
+  transition: all 0.3s ease;
+  /* CSS Filter to turn the default black icon into the Sapphire Blue color */
+  filter: invert(18%) sepia(87%) saturate(2254%) hue-rotate(211deg) brightness(94%) contrast(97%);
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(180, 83, 9, 0.25);
+  transform: scale(1.15) rotate(2deg);
+}
