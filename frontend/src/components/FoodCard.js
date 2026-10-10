@@ -1,75 +1,81 @@
 "use client";
 import { useState } from 'react';
-import Countdown from './Countdown';
 
 export default function FoodCard({ post, onClaimed }) {
-    const [status, setStatus] = useState(post.status);
-    const [isClaiming, setIsClaiming] = useState(false);
+    const [claiming, setClaiming] = useState(false);
 
     const handleClaim = async () => {
-        setIsClaiming(true);
+        // Prevent double-clicks or claiming already claimed items
+        if (post.status !== 'AVAILABLE') return;
+        
+        setClaiming(true);
         try {
-            const res = await fetch(`http://localhost:5000/api/food/${post.id}/claim`, {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://annagrahan.vercel.app';
+            
+            // Hit the claim endpoint we established in the backend
+            const res = await fetch(`${apiUrl}/api/food/${post.id}/claim`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ consumer_name: 'Local Hero' })
             });
             
             if (res.ok) {
-                setStatus('claimed');
-                onClaimed();
+                // Instantly refresh the homepage feed
+                if (onClaimed) onClaimed();
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Failed to claim food. It may have already been claimed.');
             }
         } catch (error) {
-            console.error('Failed to claim food.');
+            console.error('Error claiming food:', error);
+            alert('A network error occurred while claiming.');
+        } finally {
+            setClaiming(false);
         }
-        setIsClaiming(false);
     };
 
+    const isAvailable = post.status === 'AVAILABLE';
+
     return (
-        <div className="bg-white rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 shadow-classic-card hover:shadow-classic-hover relative group border-2 border-white">
-            {/* Top Color Accent Ribbon */}
-            <div className="h-3 w-full" style={{ backgroundColor: 'rgb(125, 156, 101)' }}></div>
-            
-            <div className="p-8">
-                <div className="flex justify-between items-start mb-6">
-                    <h3 className="font-classic text-2xl font-bold leading-tight" style={{ color: 'rgb(185, 54, 54)' }}>
-                        {post.title}
-                    </h3>
+        <div 
+            className="bg-white p-8 rounded-[2rem] shadow-classic-card border-t-8 flex flex-col justify-between h-full" 
+            style={{ borderColor: 'rgb(125, 156, 101)' }}
+        >
+            <div>
+                <h3 className="font-classic text-2xl font-bold mb-6 leading-tight" style={{ color: 'rgb(185, 54, 54)' }}>
+                    {post.title}
+                </h3>
+                
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ backgroundColor: 'rgb(255, 242, 160)' }}>
+                        🏪
+                    </div>
+                    <span className="font-medium text-gray-700 text-lg">{post.eatery_name}</span>
                 </div>
-
-                <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm" style={{ backgroundColor: 'rgb(255, 242, 160)', color: 'rgb(125, 156, 101)' }}>🏪</div>
-                        <span className="font-medium text-gray-700">{post.eatery_name}</span>
+                
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ backgroundColor: 'rgb(255, 242, 160)' }}>
+                        📦
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm" style={{ backgroundColor: 'rgb(255, 242, 160)', color: 'rgb(255, 156, 76)' }}>📦</div>
-                        <span className="font-medium text-gray-700">{post.quantity}</span>
-                    </div>
+                    <span className="font-medium text-gray-700 text-lg">{post.quantity}</span>
                 </div>
-
-                {status === 'available' ? (
-                    <div className="pt-6 border-t-2 border-dashed border-gray-100">
-                        <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Time Left</span>
-                            <Countdown expiresAt={post.expires_at} onExpire={() => setStatus('expired')} />
-                        </div>
-                        <button 
-                            onClick={handleClaim} 
-                            disabled={isClaiming}
-                            className="w-full py-4 rounded-xl font-bold text-white transition-all duration-300 active:scale-95 shadow-btn-green flex justify-center items-center gap-2"
-                            style={{ backgroundColor: 'rgb(125, 156, 101)' }}
-                        >
-                            {isClaiming ? 'Reserving...' : 'Claim This Order'} <span>→</span>
-                        </button>
-                    </div>
-                ) : (
-                    <div className="mt-4 py-4 text-center rounded-xl font-bold uppercase tracking-widest text-sm"
-                        style={{ backgroundColor: 'rgb(255, 242, 160)', color: 'rgb(185, 54, 54)' }}>
-                        {status}
-                    </div>
-                )}
             </div>
+
+            {/* Interactive Claim Button */}
+            <button 
+                onClick={handleClaim}
+                disabled={!isAvailable || claiming}
+                className={`w-full py-4 rounded-xl font-bold tracking-wider transition-all duration-200 uppercase ${
+                    isAvailable 
+                        ? 'cursor-pointer active:scale-95 hover:opacity-90' 
+                        : 'cursor-not-allowed opacity-50'
+                }`}
+                style={{ 
+                    backgroundColor: isAvailable ? 'rgb(255, 242, 160)' : '#e5e7eb', 
+                    color: isAvailable ? 'rgb(185, 54, 54)' : '#6b7280',
+                    boxShadow: isAvailable ? '0 4px 6px rgba(0,0,0,0.05)' : 'none'
+                }}
+            >
+                {claiming ? 'Claiming...' : isAvailable ? 'Claim Food' : 'Claimed'}
+            </button>
         </div>
     );
 }
