@@ -23,7 +23,7 @@ export default function PostFood() {
         };
 
         // Dynamically uses Vercel environment variable, falling back to your provided backend URL
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://annagrahan-h45emtneo-nischay-kumar.vercel.app';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://annagrahan.vercel.app';
 
         try {
             const res = await fetch(`${apiUrl}/api/food`, {
